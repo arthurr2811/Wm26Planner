@@ -52,6 +52,29 @@ function updateLiveStamp(){
   el.textContent = "Anstoßzeiten in MESZ";
 }
 
+/* ===================== LIVE-MARKIERUNG ===================== */
+/* Wir haben keine echten Live-Ergebnisse – ein Spiel gilt rein zeitbasiert als
+   "live", solange jetzt zwischen Anpfiff und Anpfiff + 2h liegt und noch kein
+   offizielles Endergebnis vorliegt. Zeiten in den Daten sind MESZ (= UTC+2). */
+const LIVE_MS = 180 * 60 * 1000;     // 3 Stunden (Puffer für Verlängerung & Elfmeterschießen)
+function kickoffMs(m){
+  const dm = /(\d{2})\.(\d{2})\./.exec(m[1]);  // "Do 11.06." → 11, 06
+  const tm = /(\d{2}):(\d{2})/.exec(m[2]);     // "21:00"     → 21, 00
+  if(!dm || !tm) return null;
+  return Date.UTC(2026, +dm[2]-1, +dm[1], +tm[1]-2, +tm[2]);  // MESZ → UTC
+}
+function isLive(i, now){
+  if(OFFICIAL[`wm26:m${i}h`]!==undefined) return false; // bereits offiziell beendet
+  const k = kickoffMs(MATCHES[i]);
+  return k!=null && now >= k && now < k + LIVE_MS;
+}
+function refreshLive(){
+  const now = Date.now();
+  document.querySelectorAll(".match[data-mi]").forEach(row=>{
+    row.classList.toggle("live", isLive(+row.dataset.mi, now));
+  });
+}
+
 /* Wert pro Feld je nach Modus (Merge-Regel) */
 function effectiveValue(key){
   const mode = getMode();
@@ -89,8 +112,8 @@ function buildGroups(){
     card.innerHTML = `
       <div class="group-head"><span class="group-letter">${g}</span><span class="group-label">Gruppe ${g}</span></div>
       <div class="matches">${ms.map(({m,i})=>`
-        <div class="match">
-          <span class="when"><b>${m[1]}</b>${m[2]} · ${m[5]}</span>
+        <div class="match" data-mi="${i}">
+          <span class="when"><b>${m[1]}</b>${m[2]} · ${m[5]}<span class="live-badge">● Live</span></span>
           ${teamHTML(m[3], true)}
           ${scoreInput(`wm26:m${i}h`)}
           <span class="colon">:</span>
@@ -193,6 +216,7 @@ function rebuild(){
   render();
   updateChrome();
   updateLiveStamp();
+  refreshLive();
 }
 
 function chooseMode(newMode){
@@ -234,4 +258,5 @@ document.querySelectorAll("#modeModal .mode-btn").forEach(b=>{
   await loadOfficial();
   if(!getMode()) setMode("continue");   // Standard: Weiterrechnen, ohne Abfrage
   rebuild();                            // Moduswechsel nur über den Button
+  setInterval(refreshLive, 60000);      // LIVE-Status jede Minute nachziehen
 })();

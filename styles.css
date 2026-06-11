@@ -48,6 +48,8 @@ header{
 }
 .subline .dotgreen{color:var(--green)} .subline .dotred{color:var(--red)} .subline .dotblue{color:var(--blue)}
 .subline .dates{margin-left:auto; font-weight:600; letter-spacing:.08em; color:#56503f;}
+.updated{font-family:var(--narrow); font-weight:600; font-size:12px; text-transform:uppercase;
+  letter-spacing:.08em; color:#56503f; margin-top:10px;}
 
 .toolbar{display:flex; gap:10px; flex-wrap:wrap; margin-top:16px;}
 .btn{
@@ -107,6 +109,16 @@ header{
 .match:last-child{border-bottom:none;}
 .when{font-family:var(--narrow); font-weight:600; font-size:11px; color:#56503f; line-height:1.15;}
 .when b{display:block; font-size:12px; color:var(--ink);}
+
+/* LIVE-Markierung (zeitbasiert, ohne echte Live-Ergebnisse) */
+.match.live{background:#FDEBEC;}
+.live-badge{display:none; width:fit-content; margin-top:3px;
+  font-family:var(--narrow); font-weight:700; font-size:9.5px; letter-spacing:.12em;
+  text-transform:uppercase; color:#fff; background:var(--red);
+  padding:1px 5px; border-radius:2px;
+  animation:livePulse 1.4s ease-in-out infinite;}
+.match.live .live-badge{display:block;}
+@keyframes livePulse{0%,100%{opacity:1;} 50%{opacity:.4;}}
 .team{font-weight:600; font-size:13px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
 .team.home{text-align:right;}
 .team .fl{font-size:14px;}
