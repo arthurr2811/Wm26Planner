@@ -135,24 +135,48 @@ function buildGroups(){
     root.appendChild(card);
   }
 }
-function koCard(tag, d, t, ort, ph1, ph2, idx, prefix, final){
-  return `<div class="ko${final ? " final" : ""}">
+/* ===================== K.O.-STRUKTUR ===================== */
+/* Stabile Match-IDs: Gruppenspiele m0..m71, K.o. "r32:0".."fin:3".
+   slotAt = Index des Heim-Slots im Daten-Array (FINALS hat vorne den Tag-Namen). */
+const KO_ROUNDS = [
+  {key:"r32", list:R32,    slotAt:3, tag:i=>`SF ${i+1}`},
+  {key:"r16", list:R16,    slotAt:3, tag:i=>`AF ${i+1}`},
+  {key:"qf",  list:QF,     slotAt:3, tag:i=>`VF ${i+1}`},
+  {key:"fin", list:FINALS, slotAt:4, tag:i=>FINALS[i][0]}
+];
+const KO_BY_KEY = Object.fromEntries(KO_ROUNDS.map(r=>[r.key, r]));
+const ROUND_TAG = {r32:"SF", r16:"AF", qf:"VF", fin:"HF"};
+function koKey(id, suffix){ return "wm26:" + id.replace(":","") + suffix; }  // "r32:0","s1" → "wm26:r320s1"
+function koSlotDef(id, n){            // n = 1|2 → Slot-Objekt aus data.js
+  const [round, i] = id.split(":");
+  const r = KO_BY_KEY[round];
+  return r.list[+i][r.slotAt + n - 1];
+}
+function slotLabel(s){                // Platzhalter-Text aus dem Slot-Objekt generieren
+  if(s.g) return `${s.p}. Gruppe ${s.g}`;
+  if(s.t) return `3. ${s.t.join("/")}`;
+  const ref = s.w || s.l, [r, i] = ref.split(":");
+  return `${s.w ? "Sieger" : "Verlierer"} ${ROUND_TAG[r]} ${+i+1}`;
+}
+
+function koCard(tag, d, t, ort, id, final){
+  const row = n => `
+    <div class="ko-row">
+      <div class="ko-team ph" data-slot="${id}:${n}"></div>
+      ${scoreInput(koKey(id, `s${n}`))}
+    </div>`;
+  return `<div class="ko${final ? " final" : ""}" data-ko="${id}">
     <div class="ko-top"><span class="tag">${tag}</span><span class="meta">${d} · ${t} · ${ort}</span></div>
-    <div class="ko-row">
-      <input class="ko-team" type="text" placeholder="${ph1}" data-k="wm26:${prefix}${idx}t1">
-      ${scoreInput(`wm26:${prefix}${idx}s1`)}
-    </div>
-    <div class="ko-row">
-      <input class="ko-team" type="text" placeholder="${ph2}" data-k="wm26:${prefix}${idx}t2">
-      ${scoreInput(`wm26:${prefix}${idx}s2`)}
-    </div>
+    ${row(1)}${row(2)}
   </div>`;
 }
 function buildKO(){
-  document.getElementById("r32").innerHTML = R32.map((m,i)=>koCard(`SF ${i+1}`, ...m.slice(0,3), m[3], m[4], i, "r32", false)).join("");
-  document.getElementById("r16").innerHTML = R16.map((m,i)=>koCard(`AF ${i+1}`, ...m.slice(0,3), m[3], m[4], i, "r16", false)).join("");
-  document.getElementById("qf").innerHTML  = QF.map((m,i)=>koCard(`VF ${i+1}`, ...m.slice(0,3), m[3], m[4], i, "qf", false)).join("");
-  document.getElementById("finals").innerHTML = FINALS.map((m,i)=>koCard(m[0], m[1], m[2], m[3], m[4], m[5], i, "fin", m[0]==="Finale")).join("");
+  const mount = {r32:"r32", r16:"r16", qf:"qf", fin:"finals"};
+  for(const r of KO_ROUNDS){
+    document.getElementById(mount[r.key]).innerHTML = r.list.map((m,i)=>
+      koCard(r.tag(i), m[r.slotAt-3], m[r.slotAt-2], m[r.slotAt-1], `${r.key}:${i}`, r.key==="fin" && m[0]==="Finale")
+    ).join("");
+  }
 }
 
 /* ===================== TABELLENLOGIK ===================== */
@@ -178,19 +202,109 @@ function computeGroup(g){
   return Object.values(rows).sort((x,y)=>
     comparePoints(x,y) || TEAMS[x.c][0].localeCompare(TEAMS[y.c][0]));
 }
-function render(){
-  const thirds = [];
+/* ===================== SLOT-AUFLÖSUNG ===================== */
+/* SLOTS["r32:0:1"] = {code:"MEX"|null, official:bool} – wird bei jedem render()
+   neu berechnet. Gruppe komplett (alle 6 Spiele getippt/gespielt) → Platz 1/2
+   landen in den R32-Slots. Sieger-Kette (Phase 3) folgt. */
+let SLOTS = {};
+function slotTeam(id, n){ return SLOTS[`${id}:${n}`] || {code:null, official:false}; }
+
+/* Dritten-Zuordnung: erst wenn ALLE Gruppen komplett sind. Jeder Dritten-Slot
+   hat eine Kandidatenliste aus 5 Gruppen; die Top 8 des Dritten-Rankings werden
+   per Backtracking verteilt (Slot für Slot den bestplatzierten noch freien
+   Dritten, dessen Gruppe passt) → deterministisch und immer vollständig. */
+function assignThirds(thirds){
+  const top8 = thirds.slice(0, 8).map(t=>t.g);          // Gruppen, nach Rang sortiert
+  const slots = [];                                      // [{id,n,groups}] in R32-Reihenfolge
+  R32.forEach((m,i)=>{
+    for(const n of [1,2]){
+      const s = m[2+n];
+      if(s.t) slots.push({id:`r32:${i}`, n, groups:s.t});
+    }
+  });
+  const used = new Set(), pick = [];
+  function solve(si){
+    if(si===slots.length) return true;
+    for(const g of top8){
+      if(used.has(g) || !slots[si].groups.includes(g)) continue;
+      used.add(g); pick[si] = g;
+      if(solve(si+1)) return true;
+      used.delete(g);
+    }
+    return false;
+  }
+  const byGroup = Object.fromEntries(thirds.map(t=>[t.g, t.c]));
+  const out = {};
+  if(solve(0)) slots.forEach((s,si)=>{ out[`${s.id}:${s.n}`] = byGroup[pick[si]]; });
+  return out;
+}
+
+/* Sieger/Verlierer eines K.o.-Spiels aus den Toren bestimmen. Bei Gleichstand
+   entscheidet der i.E.-Toggle (wm26:{id}w = "1"|"2", Klick auf die Team-Zeile). */
+let KO_OUT = {};   // "r32:0" -> {winner, loser, pen}
+function koResult(id, c1, c2){
+  const out = {winner:null, loser:null, pen:false};
+  if(!c1 || !c2) return out;
+  const s1 = effectiveValue(koKey(id,"s1")), s2 = effectiveValue(koKey(id,"s2"));
+  if(s1==="" || s2==="") return out;
+  if(+s1 > +s2){ out.winner=c1; out.loser=c2; }
+  else if(+s2 > +s1){ out.winner=c2; out.loser=c1; }
+  else{
+    const w = effectiveValue(koKey(id,"w"));
+    if(w==="1"){ out.winner=c1; out.loser=c2; out.pen=true; }
+    else if(w==="2"){ out.winner=c2; out.loser=c1; out.pen=true; }
+  }
+  return out;
+}
+
+function resolveSlots(tables, thirds){
+  SLOTS = {}; KO_OUT = {};
+  const groupDone = {};
   for(const g of Object.keys(GROUPS)){
-    const sorted = computeGroup(g);
-    document.getElementById(`tbl-${g}`).innerHTML = sorted.map((r,pos)=>{
+    groupDone[g] = MATCHES.every((m,i)=> m[0]!==g ||
+      (effectiveValue(`wm26:m${i}h`)!=="" && effectiveValue(`wm26:m${i}a`)!==""));
+  }
+  const allDone = Object.values(groupDone).every(Boolean);
+  const thirdSlots = allDone ? assignThirds(thirds) : {};
+  /* Runden in Spielplan-Reihenfolge: Sieger-/Verlierer-Refs zeigen immer auf
+     bereits aufgelöste Spiele (auch fin:2/fin:3 → fin:0/fin:1). */
+  for(const round of KO_ROUNDS){
+    round.list.forEach((m,i)=>{
+      const id = `${round.key}:${i}`;
+      for(const n of [1,2]){
+        const s = m[round.slotAt + n - 1];
+        let code = null;
+        if(s.g && groupDone[s.g]) code = tables[s.g][s.p-1].c;
+        else if(s.t) code = thirdSlots[`${id}:${n}`] ?? null;
+        else if(s.w) code = (KO_OUT[s.w] || {}).winner;
+        else if(s.l) code = (KO_OUT[s.l] || {}).loser;
+        SLOTS[`${id}:${n}`] = {code: code ?? null, official:false};
+      }
+      /* Kaskaden-Invalidierung: Paarung geändert (z. B. Gruppentipp angepasst)
+         → eigene Tore + i.E.-Toggle dieses Spiels verwerfen, sonst stünde das
+         Ergebnis an der falschen Paarung. (wm26:{id}p merkt sich die Paarung.) */
+      const c1 = SLOTS[`${id}:1`].code, c2 = SLOTS[`${id}:2`].code;
+      const pairKey = koKey(id,"p"), cur = (c1||"")+"|"+(c2||"");
+      if(store.get(pairKey)!==cur){
+        if(store.get(pairKey)!==""){
+          store.set(koKey(id,"s1"),""); store.set(koKey(id,"s2"),""); store.set(koKey(id,"w"),"");
+        }
+        store.set(pairKey, cur);
+      }
+      KO_OUT[id] = koResult(id, c1, c2);
+    });
+  }
+}
+
+/* ===================== RENDERING ===================== */
+function renderTables(tables, thirds){
+  for(const g of Object.keys(GROUPS)){
+    document.getElementById(`tbl-${g}`).innerHTML = tables[g].map((r,pos)=>{
       const [name, flag] = TEAMS[r.c];
       const cls = pos<2 ? "q1" : pos===2 ? "q3" : "";
       return `<tr class="${cls}"><td class="t">${flag} ${name}</td><td>${r.sp}</td><td>${r.s}</td><td>${r.u}</td><td>${r.n}</td><td>${r.tf}:${r.ta}</td><td>${r.tf-r.ta>0?"+":""}${r.tf-r.ta}</td><td class="pts">${r.pkt}</td></tr>`;
     }).join("");
-    const t = sorted[2];
-    thirds.push({...t, g});
   }
-  thirds.sort((x,y)=>comparePoints(x,y) || x.g.localeCompare(y.g));
   document.getElementById("thirds").innerHTML = thirds.map((t,i)=>{
     const [name, flag] = TEAMS[t.c];
     return `<div class="third-slot${i<8 ? " in" : ""}">
@@ -198,6 +312,64 @@ function render(){
       <span style="margin-left:auto; font-family:var(--narrow); font-weight:700">${t.pkt} Pkt</span>
     </div>`;
   }).join("");
+}
+
+/* K.o.-Karten in-place aktualisieren (kein innerHTML-Rebuild → Eingabe-Fokus
+   bleibt erhalten, wenn ein Tipp die Auflösung kaskadieren lässt). */
+function renderKO(){
+  for(const round of KO_ROUNDS){
+    round.list.forEach((m,i)=>{
+      const id = `${round.key}:${i}`;
+      const res = KO_OUT[id] || {winner:null, loser:null, pen:false};
+      const teams = [slotTeam(id,1), slotTeam(id,2)];
+      const both = !!(teams[0].code && teams[1].code);
+      const s1 = both ? effectiveValue(koKey(id,"s1")) : "";
+      const s2 = both ? effectiveValue(koKey(id,"s2")) : "";
+      const tie = both && s1!=="" && s2!=="" && +s1===+s2;
+      for(const n of [1,2]){
+        const code = teams[n-1].code;
+        const el = document.querySelector(`.ko-team[data-slot="${id}:${n}"]`);
+        if(code){
+          const [name, flag] = TEAMS[code];
+          const pen = res.pen && res.winner===code ? ` <span class="pen">i.E.</span>` : "";
+          el.innerHTML = `<span class="fl">${flag}</span> ${name}${pen}`;
+          el.classList.remove("ph");
+        }else{
+          el.textContent = slotLabel(koSlotDef(id, n));
+          el.classList.add("ph");
+        }
+        el.classList.toggle("official", teams[n-1].official);
+        el.classList.toggle("win", !!code && res.winner===code);
+        el.classList.toggle("togglable", tie && !isFieldLocked(koKey(id,"w")));
+        const key = koKey(id, `s${n}`);
+        const inp = document.querySelector(`[data-k="${key}"]`);
+        inp.disabled = !both || isFieldLocked(key);
+        inp.classList.toggle("official", getMode()!=="scratch" && OFFICIAL[key]!==undefined);
+        const v = n===1 ? s1 : s2;
+        if(document.activeElement!==inp && inp.value!==v) inp.value = v;
+      }
+    });
+  }
+  /* Weltmeister-Banner unterm Finale */
+  const champ = (KO_OUT["fin:3"] || {}).winner;
+  const banner = document.getElementById("champ");
+  if(champ){
+    const [name, flag] = TEAMS[champ];
+    banner.innerHTML = `🏆 Weltmeister 2026: <b>${flag} ${name}</b>`;
+    banner.hidden = false;
+  }else{
+    banner.hidden = true;
+  }
+}
+
+function render(){
+  const tables = {};
+  for(const g of Object.keys(GROUPS)) tables[g] = computeGroup(g);
+  const thirds = Object.keys(GROUPS).map(g=>({...tables[g][2], g}));
+  thirds.sort((x,y)=>comparePoints(x,y) || x.g.localeCompare(y.g));
+  resolveSlots(tables, thirds);
+  renderTables(tables, thirds);
+  renderKO();
 }
 
 /* ===================== EVENTS ===================== */
@@ -264,6 +436,19 @@ document.getElementById("groups").addEventListener("click", e=>{
   const b = e.target.closest(".live-badge");
   if(b) openLiveSearch(+b.dataset.live);
 });
+/* i.E.-Toggle: bei Gleichstand Klick auf die Team-Zeile = Elfmeter-Sieger
+   markieren, zweiter Klick nimmt die Wahl zurück. */
+for(const cid of ["r32","r16","qf","finals"]){
+  document.getElementById(cid).addEventListener("click", e=>{
+    const el = e.target.closest(".ko-team.togglable");
+    if(!el) return;
+    const slotId = el.dataset.slot;                // "r32:0:1"
+    const n = slotId.slice(-1), id = slotId.slice(0, -2);
+    const wKey = koKey(id, "w");
+    store.set(wKey, store.get(wKey)===n ? "" : n);
+    render();
+  });
+}
 
 (async function init(){
   await loadOfficial();

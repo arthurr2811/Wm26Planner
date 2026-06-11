@@ -194,15 +194,28 @@ tr.q3 td{background:#FBF3DC;}
 .ko-row{display:grid; grid-template-columns:1fr 34px; gap:6px; align-items:center; margin-bottom:5px;}
 .ko-row:last-child{margin-bottom:0;}
 .ko-team{
-  width:100%; border:none; border-bottom:2px solid var(--line);
+  width:100%; border-bottom:2px solid var(--line); min-height:26px;
   background:transparent; font-family:var(--body); font-weight:600; font-size:13.5px;
-  padding:4px 2px; color:var(--ink);
+  padding:4px 2px; color:var(--ink); display:flex; align-items:center; gap:5px;
 }
-.ko-team::placeholder{color:#A39B86; font-weight:500;}
-.ko-team:focus{outline:none; border-bottom-color:var(--gold);}
+.ko-team.ph{color:#A39B86; font-weight:500;}
 .ko .score{width:34px;}
 .ko.final{border-width:3.5px; background:#FFFDF6; box-shadow:5px 5px 0 var(--gold);}
 .ko.final .ko-top .tag{background:var(--gold); color:var(--ink);}
+.ko-team.win{font-weight:700; border-bottom-color:var(--green);}
+.ko-team.togglable{cursor:pointer;}
+.ko-team.togglable:hover{border-bottom-color:var(--gold); background:#FBF3DC;}
+.ko-team .pen{
+  font-family:var(--narrow); font-weight:700; font-size:10px; letter-spacing:.08em;
+  background:var(--gold); color:var(--ink); padding:1px 5px; border-radius:2px;
+}
+.champ{
+  margin-top:18px; border:3px solid var(--ink); border-radius:3px; background:#FBF3DC;
+  box-shadow:6px 6px 0 var(--gold); padding:16px 20px; text-align:center;
+  font-family:var(--display); font-size:clamp(20px,4vw,34px); text-transform:uppercase;
+  letter-spacing:.04em;
+}
+.champ b{color:var(--green);}
 
 footer{
   margin-top:42px; padding-top:14px; border-top:3px solid var(--ink);
@@ -237,4 +250,4 @@ footer a:hover{color:var(--green);}
   display:inline-flex; align-items:center;}
 .score.official{background:#E4F2E9; border-color:var(--green); color:var(--ink); font-weight:700;}
 input.score:disabled{opacity:1; cursor:default;}
-input.ko-team:disabled{opacity:1; cursor:default; color:#9b937f;}
+.ko-team.official{border-bottom-color:var(--green);}
