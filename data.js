@@ -96,44 +96,49 @@ const MATCHES = [
  ["J","So 28.06.","04:00","JOR","ARG","Dallas"],
  ["J","So 28.06.","04:00","ALG","AUT","Kansas City"]
 ];
-/* K.o.-Runde: [Tag/Datum, Zeit, Ort, Heim-Platzhalter, Gast-Platzhalter] */
+/* K.o.-Runde: [Tag/Datum, Zeit, Ort, Heim-Slot, Gast-Slot]
+   Slots sind maschinenlesbar (Anzeige-Text wird in app.js generiert):
+     {g:"A",p:2}            = 2. Gruppe A
+     {t:["A","B",...]}      = bester Gruppendritter aus diesen Gruppen
+     {w:"r32:0"}            = Sieger des Spiels (Runde:Index)
+     {l:"fin:0"}            = Verlierer des Spiels (Runde:Index) */
 const R32 = [
- ["So 28.06.","21:00","Los Angeles","2. Gruppe A","2. Gruppe B"],
- ["Mo 29.06.","19:00","Houston","1. Gruppe C","2. Gruppe F"],
- ["Mo 29.06.","22:30","Boston","1. Gruppe E","3. A/B/C/D/F"],
- ["Di 30.06.","03:00","Monterrey","1. Gruppe F","2. Gruppe C"],
- ["Di 30.06.","19:00","Dallas","2. Gruppe E","2. Gruppe I"],
- ["Di 30.06.","23:00","New Jersey","1. Gruppe I","3. C/D/F/G/H"],
- ["Mi 01.07.","03:00","Mexiko-Stadt","1. Gruppe A","3. C/E/F/H/I"],
- ["Mi 01.07.","18:00","Atlanta","1. Gruppe L","3. E/H/I/J/K"],
- ["Mi 01.07.","22:00","Seattle","1. Gruppe G","3. A/E/H/I/J"],
- ["Do 02.07.","02:00","San Francisco","1. Gruppe D","3. B/E/F/I/J"],
- ["Do 02.07.","21:00","Los Angeles","1. Gruppe H","2. Gruppe J"],
- ["Fr 03.07.","01:00","Toronto","2. Gruppe K","2. Gruppe L"],
- ["Fr 03.07.","05:00","Vancouver","1. Gruppe B","3. E/F/G/I/J"],
- ["Fr 03.07.","20:00","Dallas","2. Gruppe D","2. Gruppe G"],
- ["Sa 04.07.","00:00","Miami","1. Gruppe J","2. Gruppe H"],
- ["Sa 04.07.","03:30","Kansas City","1. Gruppe K","3. D/E/I/J/L"]
+ ["So 28.06.","21:00","Los Angeles",{g:"A",p:2},{g:"B",p:2}],
+ ["Mo 29.06.","19:00","Houston",{g:"C",p:1},{g:"F",p:2}],
+ ["Mo 29.06.","22:30","Boston",{g:"E",p:1},{t:["A","B","C","D","F"]}],
+ ["Di 30.06.","03:00","Monterrey",{g:"F",p:1},{g:"C",p:2}],
+ ["Di 30.06.","19:00","Dallas",{g:"E",p:2},{g:"I",p:2}],
+ ["Di 30.06.","23:00","New Jersey",{g:"I",p:1},{t:["C","D","F","G","H"]}],
+ ["Mi 01.07.","03:00","Mexiko-Stadt",{g:"A",p:1},{t:["C","E","F","H","I"]}],
+ ["Mi 01.07.","18:00","Atlanta",{g:"L",p:1},{t:["E","H","I","J","K"]}],
+ ["Mi 01.07.","22:00","Seattle",{g:"G",p:1},{t:["A","E","H","I","J"]}],
+ ["Do 02.07.","02:00","San Francisco",{g:"D",p:1},{t:["B","E","F","I","J"]}],
+ ["Do 02.07.","21:00","Los Angeles",{g:"H",p:1},{g:"J",p:2}],
+ ["Fr 03.07.","01:00","Toronto",{g:"K",p:2},{g:"L",p:2}],
+ ["Fr 03.07.","05:00","Vancouver",{g:"B",p:1},{t:["E","F","G","I","J"]}],
+ ["Fr 03.07.","20:00","Dallas",{g:"D",p:2},{g:"G",p:2}],
+ ["Sa 04.07.","00:00","Miami",{g:"J",p:1},{g:"H",p:2}],
+ ["Sa 04.07.","03:30","Kansas City",{g:"K",p:1},{t:["D","E","I","J","L"]}]
 ];
 const R16 = [
- ["Sa 04.07.","19:00","Houston","Sieger SF 1","Sieger SF 3"],
- ["Sa 04.07.","23:00","Philadelphia","Sieger SF 2","Sieger SF 5"],
- ["So 05.07.","22:00","New Jersey","Sieger SF 4","Sieger SF 6"],
- ["Mo 06.07.","02:00","Mexiko-Stadt","Sieger SF 7","Sieger SF 8"],
- ["Mo 06.07.","21:00","Dallas","Sieger SF 11","Sieger SF 12"],
- ["Di 07.07.","02:00","Seattle","Sieger SF 9","Sieger SF 10"],
- ["Di 07.07.","18:00","Atlanta","Sieger SF 14","Sieger SF 16"],
- ["Di 07.07.","22:00","Vancouver","Sieger SF 13","Sieger SF 15"]
+ ["Sa 04.07.","19:00","Houston",{w:"r32:0"},{w:"r32:2"}],
+ ["Sa 04.07.","23:00","Philadelphia",{w:"r32:1"},{w:"r32:4"}],
+ ["So 05.07.","22:00","New Jersey",{w:"r32:3"},{w:"r32:5"}],
+ ["Mo 06.07.","02:00","Mexiko-Stadt",{w:"r32:6"},{w:"r32:7"}],
+ ["Mo 06.07.","21:00","Dallas",{w:"r32:10"},{w:"r32:11"}],
+ ["Di 07.07.","02:00","Seattle",{w:"r32:8"},{w:"r32:9"}],
+ ["Di 07.07.","18:00","Atlanta",{w:"r32:13"},{w:"r32:15"}],
+ ["Di 07.07.","22:00","Vancouver",{w:"r32:12"},{w:"r32:14"}]
 ];
 const QF = [
- ["Do 09.07.","22:00","Boston","Sieger AF 1","Sieger AF 2"],
- ["Fr 10.07.","21:00","Los Angeles","Sieger AF 5","Sieger AF 6"],
- ["Sa 11.07.","23:00","Miami","Sieger AF 3","Sieger AF 4"],
- ["So 12.07.","03:00","Kansas City","Sieger AF 7","Sieger AF 8"]
+ ["Do 09.07.","22:00","Boston",{w:"r16:0"},{w:"r16:1"}],
+ ["Fr 10.07.","21:00","Los Angeles",{w:"r16:4"},{w:"r16:5"}],
+ ["Sa 11.07.","23:00","Miami",{w:"r16:2"},{w:"r16:3"}],
+ ["So 12.07.","03:00","Kansas City",{w:"r16:6"},{w:"r16:7"}]
 ];
 const FINALS = [
- ["HF 1","Di 14.07.","21:00","Dallas","Sieger VF 1","Sieger VF 2"],
- ["HF 2","Mi 15.07.","21:00","Atlanta","Sieger VF 3","Sieger VF 4"],
- ["Platz 3","Sa 18.07.","22:00","Miami","Verlierer HF 1","Verlierer HF 2"],
- ["Finale","So 19.07.","21:00","New Jersey","Sieger HF 1","Sieger HF 2"]
+ ["HF 1","Di 14.07.","21:00","Dallas",{w:"qf:0"},{w:"qf:1"}],
+ ["HF 2","Mi 15.07.","21:00","Atlanta",{w:"qf:2"},{w:"qf:3"}],
+ ["Platz 3","Sa 18.07.","22:00","Miami",{l:"fin:0"},{l:"fin:1"}],
+ ["Finale","So 19.07.","21:00","New Jersey",{w:"fin:0"},{w:"fin:1"}]
 ];
