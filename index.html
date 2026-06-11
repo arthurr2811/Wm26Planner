@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>WM 26 Planer und Ergebnisse · USA · Kanada · Mexiko</title>
+<link rel="stylesheet" href="fonts.css">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+<div class="modal" id="modeModal" hidden>
+  <div class="modal-card">
+    <h2>WM26 Planer</h2>
+    <p class="lead">Wie möchtest du starten?</p>
+    <div class="mode-grid">
+      <button class="mode-btn" data-mode="scratch">
+        <span class="mn">1</span><span class="mt">Von 0 tippen</span>
+        <span class="md">Leerer Spielplan. Du tippst alle Ergebnisse selbst und rechnest die WM komplett durch.</span>
+      </button>
+      <button class="mode-btn" data-mode="continue">
+        <span class="mn">2</span><span class="mt">Weiterrechnen</span>
+        <span class="md">Bereits gespielte Spiele sind eingetragen. Den Rest tippst du selbst und probierst Szenarien.</span>
+      </button>
+      <button class="mode-btn" data-mode="info">
+        <span class="mn">3</span><span class="mt">Nur Info</span>
+        <span class="md">Reine Ansicht: zeigt nur den aktuellen Stand der gespielten Spiele. Nichts editierbar.</span>
+      </button>
+    </div>
+  </div>
+</div>
+
+<div class="wrap">
+
+  <header>
+    <div class="wordmark">WM26</div>
+    <div class="subline">
+      <span><span class="dotgreen">●</span> Mexiko</span>
+      <span><span class="dotred">●</span> Kanada</span>
+      <span><span class="dotblue">●</span> USA</span>
+      <span class="dates">11. Juni – 19. Juli 2026 · 48 Teams · 104 Spiele · Alle Zeiten MESZ</span>
+    </div>
+    <div class="toolbar" id="toolbar"></div>
+    <p class="hint" id="hint"></p>
+  </header>
+
+  <h2 class="section-title">Gruppenphase</h2>
+  <p class="section-sub">11.–27. Juni · 72 Spiele · Die Top 2 jeder Gruppe + die 8 besten Dritten erreichen das Sechzehntelfinale</p>
+  <div class="groups" id="groups"></div>
+  <div class="legend">
+    <span><span class="chip g"></span>Sechzehntelfinale (Platz 1 &amp; 2)</span>
+    <span><span class="chip y"></span>Platz 3 – Quali möglich</span>
+  </div>
+
+  <h2 class="section-title" style="margin-top:34px">Die besten Gruppendritten</h2>
+  <p class="section-sub">Die 8 punktbesten Drittplatzierten kommen weiter (gold markiert)</p>
+  <div class="thirds"><div class="thirds-grid" id="thirds"></div></div>
+
+  <div class="page-break"></div>
+  <h2 class="section-title">Sechzehntelfinale</h2>
+  <p class="section-sub">28. Juni – 4. Juli</p>
+  <div class="ko-grid" id="r32"></div>
+
+  <h2 class="section-title">Achtelfinale</h2>
+  <p class="section-sub">4.–7. Juli</p>
+  <div class="ko-grid" id="r16"></div>
+
+  <h2 class="section-title">Viertelfinale</h2>
+  <p class="section-sub">9.–12. Juli</p>
+  <div class="ko-grid" id="qf"></div>
+
+  <h2 class="section-title">Halbfinale · Platz 3 · Finale</h2>
+  <p class="section-sub">14.–19. Juli</p>
+  <div class="ko-grid" id="finals"></div>
+
+  <footer>
+    <span>FIFA Fussball-Weltmeisterschaft 2026 · USA · Kanada · Mexiko</span>
+    <span id="liveStamp">Anstoßzeiten in MESZ</span>
+    <span>Made by <a href="https://github.com/arthurr2811" target="_blank" rel="noopener">Arthur</a></span>
+  </footer>
+</div>
+
+<script src="data.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
