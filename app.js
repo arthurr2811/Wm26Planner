@@ -17,6 +17,40 @@ let modeMem = "";
 function getMode(){ try{ return localStorage.getItem("wm26mode") || modeMem || ""; }catch(e){ return modeMem; } }
 function setMode(m){ modeMem=m; try{ localStorage.setItem("wm26mode", m); }catch(e){} }
 
+/* results.json = rohe API-Antwort von /v4/competitions/WC/matches (alle 104
+   Spiele). Die gesamte Zuordnung passiert hier im Client:
+   - Gruppenspiele über die Team-Paarung (Codes aus tla, Ausnahme URY→URU),
+   - K.o.-Spiele über stage + Anstoßzeit (innerhalb jeder Runde eindeutig).
+   Befüllt OFFICIAL mit:
+   - wm26:m{i}h/a            Gruppentore (nur FINISHED)
+   - wm26:{ko}t1/t2          K.o.-Teams, sobald die API sie kennt (egal welcher Status)
+   - wm26:{ko}s1/s2          K.o.-Endstand = regularTime+extraTime, NIE fullTime
+                             (fullTime enthält bei i.E. die Elfmeter!)
+   - wm26:{ko}w              Sieger "1"|"2" (für die i.E.-Auflösung bei Gleichstand)
+   - wm26:{ko}dur / {ko}pen  "nv"|"ie" + Elfmeter-Ergebnis für die Anzeige */
+const TLA_FIX = {URY:"URU"};
+function apiTeamCode(t){
+  const c = t && t.tla ? (TLA_FIX[t.tla] || t.tla) : null;
+  return c && TEAMS[c] ? c : null;
+}
+function koTimeIndex(){
+  const idx = {};
+  const stageFor = (round, i) =>
+    round==="r32" ? "LAST_32" : round==="r16" ? "LAST_16" : round==="qf" ? "QUARTER_FINALS" :
+    i<2 ? "SEMI_FINALS" : i===2 ? "THIRD_PLACE" : "FINAL";
+  for(const r of KO_ROUNDS){
+    r.list.forEach((m,i)=>{
+      const stage = stageFor(r.key, i);
+      const ms = kickoffFromStrings(m[r.slotAt-3], m[r.slotAt-2]);
+      idx[`${stage}|${ms}`] = `${r.key}:${i}`;
+      /* Platz 3 + Finale sind pro Stage eindeutig → auch ohne Zeit auffindbar
+         (robust gegen kurzfristige Anstoßzeit-Änderungen) */
+      if(stage==="THIRD_PLACE" || stage==="FINAL") idx[stage] = `${r.key}:${i}`;
+    });
+  }
+  return idx;
+}
+
 async function loadOfficial(){
   OFFICIAL = {};
   officialUpdated = "";
@@ -25,13 +59,50 @@ async function loadOfficial(){
     const r = await fetch("results.json", {cache:"no-store"});
     if(r.ok) data = await r.json();
   }catch(e){ data = null; }   // keine Datei / file:// → keine offiziellen Daten
-  if(data){
-    if(typeof data._updated === "string") officialUpdated = data._updated;
-    for(const idx in data){
-      const m = data[idx];
-      if(m && m.h!=null && m.a!=null){
-        OFFICIAL["wm26:m"+idx+"h"] = String(m.h);
-        OFFICIAL["wm26:m"+idx+"a"] = String(m.a);
+  if(!data || !Array.isArray(data.matches)) return;
+  if(typeof data._updated === "string") officialUpdated = data._updated;
+
+  const pairIdx = {};   // "HOME|AWAY" → {i, flip} (beide Richtungen)
+  MATCHES.forEach((m,i)=>{
+    pairIdx[`${m[3]}|${m[4]}`] = {i, flip:false};
+    pairIdx[`${m[4]}|${m[3]}`] = {i, flip:true};
+  });
+  const koIdx = koTimeIndex();
+
+  for(const mt of data.matches){
+    const finished = mt.status === "FINISHED";
+    const sc = mt.score || {};
+    if(mt.stage === "GROUP_STAGE"){
+      if(!finished) continue;
+      const hc = apiTeamCode(mt.homeTeam), ac = apiTeamCode(mt.awayTeam);
+      const p = hc && ac ? pairIdx[`${hc}|${ac}`] : null;
+      const ft = sc.fullTime;
+      if(!p || ft?.home==null || ft?.away==null) continue;
+      OFFICIAL[`wm26:m${p.i}h`] = String(p.flip ? ft.away : ft.home);
+      OFFICIAL[`wm26:m${p.i}a`] = String(p.flip ? ft.home : ft.away);
+    }else{
+      const id = koIdx[`${mt.stage}|${Date.parse(mt.utcDate)}`] ?? koIdx[mt.stage];
+      if(!id) continue;
+      const hc = apiTeamCode(mt.homeTeam), ac = apiTeamCode(mt.awayTeam);
+      if(hc) OFFICIAL[koKey(id,"t1")] = hc;   // Paarung schon vor Anpfiff sichtbar
+      if(ac) OFFICIAL[koKey(id,"t2")] = ac;
+      if(!finished || !hc || !ac) continue;
+      let h, a;
+      if(sc.duration && sc.duration !== "REGULAR"){
+        h = (sc.regularTime?.home ?? 0) + (sc.extraTime?.home ?? 0);
+        a = (sc.regularTime?.away ?? 0) + (sc.extraTime?.away ?? 0);
+      }else{
+        h = sc.fullTime?.home; a = sc.fullTime?.away;
+      }
+      if(h==null || a==null) continue;
+      OFFICIAL[koKey(id,"s1")] = String(h);
+      OFFICIAL[koKey(id,"s2")] = String(a);
+      if(sc.winner==="HOME_TEAM")      OFFICIAL[koKey(id,"w")] = "1";
+      else if(sc.winner==="AWAY_TEAM") OFFICIAL[koKey(id,"w")] = "2";
+      if(sc.duration==="EXTRA_TIME")   OFFICIAL[koKey(id,"dur")] = "nv";
+      else if(sc.duration==="PENALTY_SHOOTOUT"){
+        OFFICIAL[koKey(id,"dur")] = "ie";
+        if(sc.penalties?.home!=null) OFFICIAL[koKey(id,"pen")] = `${sc.penalties.home}:${sc.penalties.away}`;
       }
     }
   }
@@ -57,15 +128,26 @@ function updateLiveStamp(){
    "live", solange jetzt zwischen Anpfiff und Anpfiff + 2h liegt und noch kein
    offizielles Endergebnis vorliegt. Zeiten in den Daten sind MESZ (= UTC+2). */
 const LIVE_MS = 180 * 60 * 1000;     // 3 Stunden (Puffer für Verlängerung & Elfmeterschießen)
-function kickoffMs(m){
-  const dm = /(\d{2})\.(\d{2})\./.exec(m[1]);  // "Do 11.06." → 11, 06
-  const tm = /(\d{2}):(\d{2})/.exec(m[2]);     // "21:00"     → 21, 00
+function kickoffFromStrings(dStr, tStr){
+  const dm = /(\d{2})\.(\d{2})\./.exec(dStr);  // "Do 11.06." → 11, 06
+  const tm = /(\d{2}):(\d{2})/.exec(tStr);     // "21:00"     → 21, 00
   if(!dm || !tm) return null;
   return Date.UTC(2026, +dm[2]-1, +dm[1], +tm[1]-2, +tm[2]);  // MESZ → UTC
 }
+function kickoffMs(m){ return kickoffFromStrings(m[1], m[2]); }
 function isLive(i, now){
   if(OFFICIAL[`wm26:m${i}h`]!==undefined) return false; // bereits offiziell beendet
   const k = kickoffMs(MATCHES[i]);
+  return k!=null && now >= k && now < k + LIVE_MS;
+}
+function koKickoffMs(id){
+  const [round, i] = id.split(":");
+  const r = KO_BY_KEY[round], m = r.list[+i];
+  return kickoffFromStrings(m[r.slotAt-3], m[r.slotAt-2]);
+}
+function isLiveKO(id, now){
+  if(OFFICIAL[koKey(id,"s1")]!==undefined) return false; // bereits offiziell beendet
+  const k = koKickoffMs(id);
   return k!=null && now >= k && now < k + LIVE_MS;
 }
 function refreshLive(){
@@ -73,12 +155,20 @@ function refreshLive(){
   document.querySelectorAll(".match[data-mi]").forEach(row=>{
     row.classList.toggle("live", isLive(+row.dataset.mi, now));
   });
+  document.querySelectorAll(".ko[data-ko]").forEach(card=>{
+    card.classList.toggle("live", isLiveKO(card.dataset.ko, now));
+  });
 }
 /* Klick aufs LIVE-Badge → Google-Suche zum Spiel im neuen Tab. */
 function openLiveSearch(i){
   const m = MATCHES[i];
   const q = encodeURIComponent(`${TEAMS[m[3]][0]} ${TEAMS[m[4]][0]} live`);
   window.open(`https://www.google.com/search?q=${q}`, "_blank", "noopener");
+}
+function openLiveSearchKO(id){
+  const c1 = slotTeam(id,1).code, c2 = slotTeam(id,2).code;
+  const q = c1 && c2 ? `${TEAMS[c1][0]} ${TEAMS[c2][0]} live` : "WM 2026 live";
+  window.open(`https://www.google.com/search?q=${encodeURIComponent(q)}`, "_blank", "noopener");
 }
 
 /* Wert pro Feld je nach Modus (Merge-Regel) */
@@ -166,7 +256,9 @@ function koCard(tag, d, t, ort, id, final){
       ${scoreInput(koKey(id, `s${n}`))}
     </div>`;
   return `<div class="ko${final ? " final" : ""}" data-ko="${id}">
-    <div class="ko-top"><span class="tag">${tag}</span><span class="meta">${d} · ${t} · ${ort}</span></div>
+    <div class="ko-top"><span class="tag">${tag}</span><span class="meta">${d} · ${t} · ${ort}</span>
+      <button class="live-badge" type="button" data-live-ko="${id}" title="Live-Ergebnis googeln">● Live 🔍</button>
+    </div>
     ${row(1)}${row(2)}
   </div>`;
 }
@@ -259,6 +351,7 @@ function koResult(id, c1, c2){
 
 function resolveSlots(tables, thirds){
   SLOTS = {}; KO_OUT = {};
+  const mode = getMode();
   const groupDone = {};
   for(const g of Object.keys(GROUPS)){
     groupDone[g] = MATCHES.every((m,i)=> m[0]!==g ||
@@ -273,12 +366,16 @@ function resolveSlots(tables, thirds){
       const id = `${round.key}:${i}`;
       for(const n of [1,2]){
         const s = m[round.slotAt + n - 1];
-        let code = null;
-        if(s.g && groupDone[s.g]) code = tables[s.g][s.p-1].c;
-        else if(s.t) code = thirdSlots[`${id}:${n}`] ?? null;
-        else if(s.w) code = (KO_OUT[s.w] || {}).winner;
-        else if(s.l) code = (KO_OUT[s.l] || {}).loser;
-        SLOTS[`${id}:${n}`] = {code: code ?? null, official:false};
+        let code = null, official = false;
+        const oc = mode!=="scratch" ? OFFICIAL[koKey(id, `t${n}`)] : undefined;
+        if(oc){ code = oc; official = true; }        // echte Paarung schlägt Ableitung
+        else if(mode!=="info"){                      // Info-Modus: nie selbst ableiten
+          if(s.g && groupDone[s.g]) code = tables[s.g][s.p-1].c;
+          else if(s.t) code = thirdSlots[`${id}:${n}`] ?? null;
+          else if(s.w) code = (KO_OUT[s.w] || {}).winner;
+          else if(s.l) code = (KO_OUT[s.l] || {}).loser;
+        }
+        SLOTS[`${id}:${n}`] = {code: code ?? null, official};
       }
       /* Kaskaden-Invalidierung: Paarung geändert (z. B. Gruppentipp angepasst)
          → eigene Tore + i.E.-Toggle dieses Spiels verwerfen, sonst stünde das
@@ -326,13 +423,22 @@ function renderKO(){
       const s1 = both ? effectiveValue(koKey(id,"s1")) : "";
       const s2 = both ? effectiveValue(koKey(id,"s2")) : "";
       const tie = both && s1!=="" && s2!=="" && +s1===+s2;
+      /* "n.V."/"i.E. 4:3" kommt bei gefetchten Spielen aus duration/penalties,
+         bei eigenen Tipps aus dem i.E.-Toggle (Gleichstand + gewählter Sieger). */
+      const dur = getMode()!=="scratch" ? OFFICIAL[koKey(id,"dur")] : undefined;
+      const penRes = getMode()!=="scratch" ? OFFICIAL[koKey(id,"pen")] : undefined;
+      let chip = "";
+      if(res.winner){
+        if(dur==="ie")      chip = ` <span class="pen">i.E.${penRes ? " "+penRes : ""}</span>`;
+        else if(dur==="nv") chip = ` <span class="pen">n.V.</span>`;
+        else if(res.pen)    chip = ` <span class="pen">i.E.</span>`;
+      }
       for(const n of [1,2]){
         const code = teams[n-1].code;
         const el = document.querySelector(`.ko-team[data-slot="${id}:${n}"]`);
         if(code){
           const [name, flag] = TEAMS[code];
-          const pen = res.pen && res.winner===code ? ` <span class="pen">i.E.</span>` : "";
-          el.innerHTML = `<span class="fl">${flag}</span> ${name}${pen}`;
+          el.innerHTML = `<span class="fl">${flag}</span> ${name}${res.winner===code ? chip : ""}`;
           el.classList.remove("ph");
         }else{
           el.textContent = slotLabel(koSlotDef(id, n));
@@ -413,9 +519,9 @@ function resetAll(){
 }
 
 const MODE_INFO = {
-  scratch:  ["Von 0 tippen", "Leerer Spielplan – du tippst alle Ergebnisse selbst. Gruppentabellen und das Ranking der Gruppendritten berechnen sich automatisch (Punkte → Tordifferenz → Tore)."],
-  continue: ["Weiterrechnen", "Bereits gespielte Spiele sind eingetragen und gesperrt (grün). Offene Spiele tippst du selbst und probierst Szenarien durch. Gruppentabellen und das Ranking der Gruppendritten berechnen sich automatisch (Punkte → Tordifferenz → Tore)."],
-  info:     ["Nur Info", "Aktueller Stand der bereits gespielten Gruppenspiele. Reine Ansicht – nichts editierbar."]
+  scratch:  ["Von 0 tippen", "Leerer Spielplan. Du tippst alle Ergebnisse selbst. Tabellen, Gruppendritte und der komplette K.o.-Baum berechnen sich automatisch."],
+  continue: ["Weiterrechnen", "Bereits gespielte Spiele sind bereits eingetragen. Den Rest tippst du selbst und probierst Szenarien durch. Tabellen, Gruppendritte und der komplette K.o.-Baum berechnen sich automatisch."],
+  info:     ["Nur Info", "Aktueller Stand der WM. Reine Ansicht, nichts editierbar."]
 };
 function updateChrome(){
   const mode = getMode();
@@ -432,14 +538,23 @@ function updateChrome(){
 document.querySelectorAll("#modeModal .mode-btn").forEach(b=>{
   b.addEventListener("click", ()=>chooseMode(b.dataset.mode));
 });
+/* Modal ohne Moduswechsel schließen: Klick auf den Hintergrund oder Escape */
+document.getElementById("modeModal").addEventListener("click", e=>{
+  if(e.target === e.currentTarget) e.currentTarget.hidden = true;
+});
+document.addEventListener("keydown", e=>{
+  if(e.key === "Escape") document.getElementById("modeModal").hidden = true;
+});
 document.getElementById("groups").addEventListener("click", e=>{
   const b = e.target.closest(".live-badge");
   if(b) openLiveSearch(+b.dataset.live);
 });
-/* i.E.-Toggle: bei Gleichstand Klick auf die Team-Zeile = Elfmeter-Sieger
-   markieren, zweiter Klick nimmt die Wahl zurück. */
+/* K.o.-Bereich: Live-Badge → Google-Suche; i.E.-Toggle: bei Gleichstand Klick
+   auf die Team-Zeile = Elfmeter-Sieger markieren, zweiter Klick nimmt's zurück. */
 for(const cid of ["r32","r16","qf","finals"]){
   document.getElementById(cid).addEventListener("click", e=>{
+    const b = e.target.closest(".live-badge");
+    if(b){ openLiveSearchKO(b.dataset.liveKo); return; }
     const el = e.target.closest(".ko-team.togglable");
     if(!el) return;
     const slotId = el.dataset.slot;                // "r32:0:1"

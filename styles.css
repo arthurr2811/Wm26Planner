@@ -202,6 +202,9 @@ tr.q3 td{background:#FBF3DC;}
 .ko .score{width:34px;}
 .ko.final{border-width:3.5px; background:#FFFDF6; box-shadow:5px 5px 0 var(--gold);}
 .ko.final .ko-top .tag{background:var(--gold); color:var(--ink);}
+.ko.live{background:#FDEBEC;}
+.ko.live .live-badge{display:flex;}
+.ko .live-badge{margin-left:auto;}
 .ko-team.win{font-weight:700; border-bottom-color:var(--green);}
 .ko-team.togglable{cursor:pointer;}
 .ko-team.togglable:hover{border-bottom-color:var(--gold); background:#FBF3DC;}

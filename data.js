@@ -1,6 +1,4 @@
 /* ===================== DATEN ===================== */
-/* Single Source of Truth: fetch_results.php liest die MATCHES-Paarungen
-   per Regex direkt aus dieser Datei. Format der Zeilen NICHT verändern. */
 const TEAMS = {
   MEX:["Mexiko","🇲🇽"], KOR:["Südkorea","🇰🇷"], CZE:["Tschechien","🇨🇿"], RSA:["Südafrika","🇿🇦"],
   SUI:["Schweiz","🇨🇭"], CAN:["Kanada","🇨🇦"], QAT:["Katar","🇶🇦"], BIH:["Bosnien-Herz.","🇧🇦"],
@@ -139,6 +137,6 @@ const QF = [
 const FINALS = [
  ["HF 1","Di 14.07.","21:00","Dallas",{w:"qf:0"},{w:"qf:1"}],
  ["HF 2","Mi 15.07.","21:00","Atlanta",{w:"qf:2"},{w:"qf:3"}],
- ["Platz 3","Sa 18.07.","22:00","Miami",{l:"fin:0"},{l:"fin:1"}],
+ ["Platz 3","Sa 18.07.","23:00","Miami",{l:"fin:0"},{l:"fin:1"}],
  ["Finale","So 19.07.","21:00","New Jersey",{w:"fin:0"},{w:"fin:1"}]
 ];
