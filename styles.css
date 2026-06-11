@@ -110,15 +110,31 @@ header{
 .when{font-family:var(--narrow); font-weight:600; font-size:11px; color:#56503f; line-height:1.15;}
 .when b{display:block; font-size:12px; color:var(--ink);}
 
-/* LIVE-Markierung (zeitbasiert, ohne echte Live-Ergebnisse) */
+/* LIVE-Markierung (zeitbasiert, ohne echte Live-Ergebnisse).
+   Im Live-Fenster ersetzt ein klickbares Badge die Ergebnis-Felder
+   (Klick öffnet eine Google-Suche zum Spiel). Alle Zellen sind explizit
+   platziert, damit das überlappende Badge das Grid nicht verschiebt. */
 .match.live{background:#FDEBEC;}
-.live-badge{display:none; width:fit-content; margin-top:3px;
-  font-family:var(--narrow); font-weight:700; font-size:9.5px; letter-spacing:.12em;
+.match > *:nth-child(1){grid-column:1; grid-row:1;}
+.match > *:nth-child(2){grid-column:2; grid-row:1;}
+.match > *:nth-child(3){grid-column:3; grid-row:1;}
+.match > *:nth-child(4){grid-column:4; grid-row:1;}
+.match > *:nth-child(5){grid-column:5; grid-row:1;}
+.match > *:nth-child(6){grid-column:6; grid-row:1;}
+.live-badge{
+  display:none;
+  grid-column:3 / 6; grid-row:1; align-self:center;
+  align-items:center; justify-content:center; gap:5px;
+  border:none; cursor:pointer;
+  font-family:var(--narrow); font-weight:700; font-size:11px; letter-spacing:.1em;
   text-transform:uppercase; color:#fff; background:var(--red);
-  padding:1px 5px; border-radius:2px;
-  animation:livePulse 1.4s ease-in-out infinite;}
-.match.live .live-badge{display:block;}
-@keyframes livePulse{0%,100%{opacity:1;} 50%{opacity:.4;}}
+  padding:4px 6px; border-radius:2px; white-space:nowrap;
+  animation:livePulse 1.4s ease-in-out infinite;
+}
+.match.live .live-badge{display:flex;}
+.match.live .score, .match.live .colon{visibility:hidden;}
+.live-badge:hover{filter:brightness(1.1); text-decoration:underline;}
+@keyframes livePulse{0%,100%{opacity:1;} 50%{opacity:.5;}}
 .team{font-weight:600; font-size:13px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
 .team.home{text-align:right;}
 .team .fl{font-size:14px;}

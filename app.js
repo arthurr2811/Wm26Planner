@@ -74,6 +74,12 @@ function refreshLive(){
     row.classList.toggle("live", isLive(+row.dataset.mi, now));
   });
 }
+/* Klick aufs LIVE-Badge → Google-Suche zum Spiel im neuen Tab. */
+function openLiveSearch(i){
+  const m = MATCHES[i];
+  const q = encodeURIComponent(`${TEAMS[m[3]][0]} ${TEAMS[m[4]][0]} live`);
+  window.open(`https://www.google.com/search?q=${q}`, "_blank", "noopener");
+}
 
 /* Wert pro Feld je nach Modus (Merge-Regel) */
 function effectiveValue(key){
@@ -113,12 +119,13 @@ function buildGroups(){
       <div class="group-head"><span class="group-letter">${g}</span><span class="group-label">Gruppe ${g}</span></div>
       <div class="matches">${ms.map(({m,i})=>`
         <div class="match" data-mi="${i}">
-          <span class="when"><b>${m[1]}</b>${m[2]} · ${m[5]}<span class="live-badge">● Live</span></span>
+          <span class="when"><b>${m[1]}</b>${m[2]} · ${m[5]}</span>
           ${teamHTML(m[3], true)}
           ${scoreInput(`wm26:m${i}h`)}
           <span class="colon">:</span>
           ${scoreInput(`wm26:m${i}a`)}
           ${teamHTML(m[4], false)}
+          <button class="live-badge" type="button" data-live="${i}" title="Live-Ergebnis googeln">● Live 🔍</button>
         </div>`).join("")}
       </div>
       <table class="standings">
@@ -252,6 +259,10 @@ function updateChrome(){
 /* ===================== START ===================== */
 document.querySelectorAll("#modeModal .mode-btn").forEach(b=>{
   b.addEventListener("click", ()=>chooseMode(b.dataset.mode));
+});
+document.getElementById("groups").addEventListener("click", e=>{
+  const b = e.target.closest(".live-badge");
+  if(b) openLiveSearch(+b.dataset.live);
 });
 
 (async function init(){

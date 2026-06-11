@@ -1,0 +1,6 @@
+{
+  "_note": "Platzhalter - wird in Phase 2 von fetch_results.php automatisch ueberschrieben. Schluessel = Index aus MATCHES, h/a = Endstand abgeschlossener Spiele.",
+  "0": { "h": 3, "a": 1 },
+  "1": { "h": 2, "a": 2 },
+  "2": { "h": 1, "a": 0 }
+}
