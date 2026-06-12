@@ -152,11 +152,14 @@ function isLiveKO(id, now){
 }
 function refreshLive(){
   const now = Date.now();
+  /* "Von 0"-Modus: leerer Spielplan ohne Bezug zu echten Anstoßzeiten –
+     ein Live-Badge ergäbe hier keinen Sinn. */
+  const live = getMode()!=="scratch";
   document.querySelectorAll(".match[data-mi]").forEach(row=>{
-    row.classList.toggle("live", isLive(+row.dataset.mi, now));
+    row.classList.toggle("live", live && isLive(+row.dataset.mi, now));
   });
   document.querySelectorAll(".ko[data-ko]").forEach(card=>{
-    card.classList.toggle("live", isLiveKO(card.dataset.ko, now));
+    card.classList.toggle("live", live && isLiveKO(card.dataset.ko, now));
   });
 }
 /* Klick aufs LIVE-Badge → Google-Suche zum Spiel im neuen Tab. */
@@ -519,8 +522,8 @@ function resetAll(){
 }
 
 const MODE_INFO = {
-  scratch:  ["Von 0 tippen", "Leerer Spielplan. Du tippst alle Ergebnisse selbst. Tabellen, Gruppendritte und der komplette K.o.-Baum berechnen sich automatisch."],
-  continue: ["Weiterrechnen", "Bereits gespielte Spiele sind bereits eingetragen. Den Rest tippst du selbst und probierst Szenarien durch. Tabellen, Gruppendritte und der komplette K.o.-Baum berechnen sich automatisch."],
+  scratch:  ["Von 0 rechnen", "Leerer Spielplan. Du trägst alle Ergebnisse selbst ein. Tabellen, Gruppendritte und der komplette K.o.-Baum berechnen sich automatisch."],
+  continue: ["Weiterrechnen", "Bereits gespielte Spiele sind bereits eingetragen. Den Rest trägst du selbst ein und probierst Szenarien durch. Tabellen, Gruppendritte und der komplette K.o.-Baum berechnen sich automatisch."],
   info:     ["Nur Info", "Aktueller Stand der WM. Reine Ansicht, nichts editierbar."]
 };
 function updateChrome(){
@@ -529,7 +532,7 @@ function updateChrome(){
   let html = `<span class="mode-tag">Modus: ${label}</span>`;
   html += `<button class="btn secondary" onclick="showModeModal()">Modus wechseln</button>`;
   if(mode!=="info")
-    html += `<button class="btn secondary" onclick="resetAll()">Alle Tipps löschen</button>`;
+    html += `<button class="btn secondary" onclick="resetAll()">Alle Eingaben löschen</button>`;
   document.getElementById("toolbar").innerHTML = html;
   document.getElementById("hint").textContent = hint;
 }
