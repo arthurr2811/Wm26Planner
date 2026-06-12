@@ -7,9 +7,9 @@
   --gold:#E0A82E;
   --line:#C9C2B4;
   --soft:#F1ECDF;
-  --display:'Anton', 'Haettenschweiler', 'Arial Narrow Bold', sans-serif;
-  --body:'Archivo', system-ui, sans-serif;
-  --narrow:'Archivo Narrow', 'Arial Narrow', sans-serif;
+  --display:'Twemoji Country Flags', 'Anton', 'Haettenschweiler', 'Arial Narrow Bold', sans-serif;
+  --body:'Twemoji Country Flags', 'Archivo', system-ui, sans-serif;
+  --narrow:'Twemoji Country Flags', 'Archivo Narrow', 'Arial Narrow', sans-serif;
 }
 *{box-sizing:border-box; margin:0; padding:0;}
 html{-webkit-print-color-adjust:exact; print-color-adjust:exact;}
