@@ -61,6 +61,14 @@ header{
 .btn:hover{transform:translate(-1px,-1px); box-shadow:3px 3px 0 var(--gold);}
 .hint{font-size:12.5px; color:#56503f; margin-top:10px; max-width:70ch;}
 
+/* Spielplan-Button: abgesetzt von den Modus-Controls, ganz rechts, auffällig */
+.btn.cal-btn{
+  margin-left:auto; background:var(--gold); color:var(--ink); border-color:var(--ink);
+  font-size:14px; padding:9px 18px; box-shadow:3px 3px 0 var(--ink);
+}
+.btn.cal-btn:hover{transform:translate(-1px,-1px); box-shadow:4px 4px 0 var(--ink);}
+@media(max-width:560px){ .btn.cal-btn{margin-left:0;} }
+
 /* ============ SEKTIONEN ============ */
 .section-title{
   font-family:var(--display);
@@ -254,3 +262,57 @@ footer a:hover{color:var(--green);}
 .score.official{background:#E4F2E9; border-color:var(--green); color:var(--ink); font-weight:700;}
 input.score:disabled{opacity:1; cursor:default;}
 .ko-team.official{border-bottom-color:var(--green);}
+
+/* ============ SPIELPLAN / KALENDER ============ */
+.cal-card{max-width:880px; display:flex; flex-direction:column; max-height:calc(100vh - 48px);}
+.cal-head{display:flex; align-items:flex-start; justify-content:space-between; gap:12px;}
+.cal-close{
+  font-family:var(--narrow); font-weight:700; font-size:18px; line-height:1;
+  background:transparent; color:var(--ink); border:2px solid var(--ink); border-radius:2px;
+  width:34px; height:34px; cursor:pointer; flex:none;
+}
+.cal-close:hover{transform:translate(-1px,-1px); box-shadow:3px 3px 0 var(--gold);}
+.cal-body{
+  position:relative; overflow-y:auto; margin-top:6px;
+  border-top:2px solid var(--ink); padding-right:6px;
+}
+.cal-day{
+  position:sticky; top:0; z-index:1; background:var(--paper);
+  font-family:var(--narrow); font-weight:700; text-transform:uppercase; letter-spacing:.1em;
+  font-size:13px; color:var(--ink); padding:9px 2px 5px; margin-top:6px;
+  border-bottom:2px dashed var(--line); display:flex; align-items:baseline; gap:10px;
+}
+.cal-day.is-today{color:var(--green);}
+.cal-day .cal-rel{font-size:11px; color:var(--gold); letter-spacing:.12em;}
+.cal-day.is-today .cal-rel{color:var(--green);}
+.cal-day .cal-count{margin-left:auto; font-weight:600; font-size:11px; color:#56503f;}
+.cal-row{
+  display:grid; grid-template-columns:54px 1fr 64px 1fr 130px; gap:8px; align-items:center;
+  padding:6px 2px; border-bottom:1px solid #ECE7DA; position:relative;
+}
+.cal-when{font-family:var(--narrow); font-weight:600; font-size:11px; color:#56503f; line-height:1.15;}
+.cal-when b{display:block; font-size:13px; color:var(--ink);}
+.cal-home{font-weight:600; font-size:13.5px; text-align:right; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
+.cal-away{font-weight:600; font-size:13.5px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
+.cal-home.ph, .cal-away.ph{color:#A39B86; font-weight:500; font-size:12px;}
+.cal-row .fl{font-size:15px;}
+.cal-score{
+  position:relative; text-align:center;
+  font-family:var(--narrow); font-weight:700; font-size:15px; color:var(--ink);
+  white-space:nowrap;
+}
+.cal-score .cal-vs{color:#A39B86; font-weight:600; font-size:12px;}
+.cal-ort{font-family:var(--narrow); font-weight:600; font-size:11px; color:#56503f;
+  text-transform:uppercase; letter-spacing:.04em; text-align:right;
+  white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
+.cal-score .live-badge{
+  position:absolute; left:50%; top:50%; transform:translate(-50%,-50%);
+  grid-column:unset; grid-row:unset;
+}
+.cal-row.live{background:#FDEBEC;}
+.cal-row.live .live-badge{display:flex;}
+.cal-row.live .cal-sc{visibility:hidden;}
+@media(max-width:620px){
+  .cal-row{grid-template-columns:48px 1fr 52px 1fr; }
+  .cal-ort{grid-column:2 / 5; text-align:left; padding-top:2px;}
+}

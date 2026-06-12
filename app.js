@@ -161,6 +161,13 @@ function refreshLive(){
   document.querySelectorAll(".ko[data-ko]").forEach(card=>{
     card.classList.toggle("live", live && isLiveKO(card.dataset.ko, now));
   });
+  /* gleiche Live-Logik für die Kalender-Zeilen (nur sichtbar, wenn offen) */
+  document.querySelectorAll(".cal-row[data-mi]").forEach(row=>{
+    row.classList.toggle("live", live && isLive(+row.dataset.mi, now));
+  });
+  document.querySelectorAll(".cal-row[data-ko]").forEach(row=>{
+    row.classList.toggle("live", live && isLiveKO(row.dataset.ko, now));
+  });
 }
 /* Klick aufs LIVE-Badge → Google-Suche zum Spiel im neuen Tab. */
 function openLiveSearch(i){
@@ -481,6 +488,92 @@ function render(){
   renderKO();
 }
 
+/* ===================== SPIELPLAN / KALENDER ===================== */
+/* Alle 104 Spiele (Gruppen + K.o.) zu einem chronologischen Verlauf zusammen-
+   geführt, nach Tagen gruppiert. Datum-Strings ("Do 11.06.") sind schon der
+   MESZ-Kalendertag → direkt als Tages-Gruppe nutzbar. Spiegelt den aktuellen
+   Stand: K.o.-Paarungen kommen aus SLOTS, Ergebnisse aus effectiveValue. */
+function calMatches(){
+  const out = [];
+  MATCHES.forEach((m,i)=>{
+    out.push({ms:kickoffMs(m), live:`mi="${i}"`, liveBadge:`data-live="${i}"`,
+      date:m[1], time:m[2], ort:m[5], tag:`Gruppe ${m[0]}`,
+      home:{code:m[3]}, away:{code:m[4]},
+      sH:effectiveValue(`wm26:m${i}h`), sA:effectiveValue(`wm26:m${i}a`)});
+  });
+  for(const r of KO_ROUNDS){
+    r.list.forEach((m,i)=>{
+      const id = `${r.key}:${i}`, t1 = slotTeam(id,1), t2 = slotTeam(id,2);
+      const both = !!(t1.code && t2.code);
+      out.push({ms:kickoffFromStrings(m[r.slotAt-3], m[r.slotAt-2]),
+        live:`ko="${id}"`, liveBadge:`data-live-ko="${id}"`,
+        date:m[r.slotAt-3], time:m[r.slotAt-2], ort:m[r.slotAt-1], tag:r.tag(i),
+        home:{code:t1.code, label:slotLabel(koSlotDef(id,1))},
+        away:{code:t2.code, label:slotLabel(koSlotDef(id,2))},
+        sH:both?effectiveValue(koKey(id,"s1")):"", sA:both?effectiveValue(koKey(id,"s2")):""});
+    });
+  }
+  out.sort((a,b)=>(a.ms ?? 0)-(b.ms ?? 0));
+  return out;
+}
+function dateKeyFromStr(dStr){            // "Do 11.06." → 611 (Monat*100+Tag), für Heute/Morgen-Vergleich
+  const dm = /(\d{2})\.(\d{2})\./.exec(dStr);
+  return dm ? +dm[2]*100 + +dm[1] : 0;
+}
+function calTeamCell(t, side){
+  if(t.code){ const [name, flag] = TEAMS[t.code];
+    return side==="home"
+      ? `<span class="cal-home">${name} <span class="fl">${flag}</span></span>`
+      : `<span class="cal-away"><span class="fl">${flag}</span> ${name}</span>`; }
+  return `<span class="cal-${side} ph">${t.label || ""}</span>`;
+}
+function buildCalendar(){
+  const list = calMatches();
+  const now = new Date();
+  const keyOf = d => (d.getMonth()+1)*100 + d.getDate();
+  const todayKey = keyOf(now), tomorrowKey = keyOf(new Date(now.getTime()+864e5));
+  /* Scrollziel: heute, sonst der nächste anstehende Spieltag */
+  let scrollKey = null;
+  for(const m of list){ const k = dateKeyFromStr(m.date);
+    if(k>=todayKey){ scrollKey = k; break; } }
+  let html = "", curDate = null;
+  for(const m of list){
+    if(m.date!==curDate){
+      curDate = m.date;
+      const k = dateKeyFromStr(m.date);
+      const n = list.filter(x=>x.date===m.date).length;
+      const rel = k===todayKey ? `<span class="cal-rel">Heute</span>`
+                : k===tomorrowKey ? `<span class="cal-rel">Morgen</span>` : "";
+      const today = k===scrollKey;
+      html += `<div class="cal-day${today?" is-today":""}"${today?` id="calToday"`:""}>`
+            + `<span>${m.date}</span>${rel}<span class="cal-count">${n} ${n===1?"Spiel":"Spiele"}</span></div>`;
+    }
+    const both = m.sH!=="" && m.sA!=="";
+    const score = both
+      ? `<b>${m.sH}</b> : <b>${m.sA}</b>`
+      : `<span class="cal-vs">–</span>`;
+    html += `<div class="cal-row" data-${m.live}>`
+          + `<span class="cal-when"><b>${m.time}</b>${m.tag}</span>`
+          + calTeamCell(m.home,"home")
+          + `<span class="cal-score"><span class="cal-sc">${score}</span>`
+          + `<button class="live-badge" type="button" ${m.liveBadge} title="Live-Ergebnis googeln">● Live 🔍</button></span>`
+          + calTeamCell(m.away,"away")
+          + `<span class="cal-ort">${m.ort}</span>`
+          + `</div>`;
+  }
+  document.getElementById("calBody").innerHTML = html;
+}
+function openCalendar(){
+  buildCalendar();
+  refreshLive();
+  const modal = document.getElementById("calModal");
+  modal.hidden = false;
+  const body = document.getElementById("calBody");
+  const target = document.getElementById("calToday");
+  body.scrollTop = target ? Math.max(0, target.offsetTop - 4) : 0;
+}
+function closeCalendar(){ document.getElementById("calModal").hidden = true; }
+
 /* ===================== EVENTS ===================== */
 function wire(){
   document.querySelectorAll("[data-k]").forEach(el=>{
@@ -533,6 +626,7 @@ function updateChrome(){
   html += `<button class="btn secondary" onclick="showModeModal()">Modus wechseln</button>`;
   if(mode!=="info")
     html += `<button class="btn secondary" onclick="resetAll()">Alle Tipps löschen</button>`;
+  html += `<button class="btn cal-btn" onclick="openCalendar()">📅 Spielplan</button>`;
   document.getElementById("toolbar").innerHTML = html;
   document.getElementById("hint").textContent = hint;
 }
@@ -546,7 +640,21 @@ document.getElementById("modeModal").addEventListener("click", e=>{
   if(e.target === e.currentTarget) e.currentTarget.hidden = true;
 });
 document.addEventListener("keydown", e=>{
-  if(e.key === "Escape") document.getElementById("modeModal").hidden = true;
+  if(e.key === "Escape"){
+    document.getElementById("modeModal").hidden = true;
+    closeCalendar();
+  }
+});
+/* Spielplan-Modal: schließen per X / Hintergrund-Klick, Live-Badge → Google-Suche */
+document.getElementById("calClose").addEventListener("click", closeCalendar);
+document.getElementById("calModal").addEventListener("click", e=>{
+  if(e.target === e.currentTarget) closeCalendar();
+});
+document.getElementById("calBody").addEventListener("click", e=>{
+  const b = e.target.closest(".live-badge");
+  if(!b) return;
+  if(b.dataset.live!==undefined) openLiveSearch(+b.dataset.live);
+  else if(b.dataset.liveKo!==undefined) openLiveSearchKO(b.dataset.liveKo);
 });
 document.getElementById("groups").addEventListener("click", e=>{
   const b = e.target.closest(".live-badge");
