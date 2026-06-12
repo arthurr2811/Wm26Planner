@@ -532,7 +532,7 @@ function updateChrome(){
   let html = `<span class="mode-tag">Modus: ${label}</span>`;
   html += `<button class="btn secondary" onclick="showModeModal()">Modus wechseln</button>`;
   if(mode!=="info")
-    html += `<button class="btn secondary" onclick="resetAll()">Alle Eingaben löschen</button>`;
+    html += `<button class="btn secondary" onclick="resetAll()">Alle Tipps löschen</button>`;
   document.getElementById("toolbar").innerHTML = html;
   document.getElementById("hint").textContent = hint;
 }
