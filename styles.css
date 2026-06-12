@@ -238,11 +238,13 @@ footer a{color:var(--ink); text-decoration:none; border-bottom:2px solid var(--g
 footer a:hover{color:var(--green);}
 
 /* ============ MODUS-AUSWAHL ============ */
-.modal{position:fixed; inset:0; z-index:50; display:flex; align-items:center; justify-content:center;
+.modal{position:fixed; inset:0; z-index:50; display:flex; justify-content:center;
+  overflow-y:auto; -webkit-overflow-scrolling:touch;
   background:rgba(20,33,61,.55); padding:24px;}
 .modal[hidden]{display:none;}
 .modal-card{background:var(--paper); border:3px solid var(--ink); border-radius:4px;
-  box-shadow:10px 10px 0 var(--gold); max-width:780px; width:100%; padding:26px 26px 30px;}
+  box-shadow:10px 10px 0 var(--gold); max-width:780px; width:100%; padding:26px 26px 30px;
+  margin:auto;}
 .modal-card h2{font-family:var(--display); font-size:clamp(30px,6vw,54px); text-transform:uppercase; line-height:1;}
 .modal-card .lead{font-family:var(--narrow); font-weight:600; text-transform:uppercase; letter-spacing:.12em;
   font-size:13px; color:#56503f; margin:6px 0 20px;}
@@ -254,6 +256,17 @@ footer a:hover{color:var(--green);}
 .mode-btn .mt{font-family:var(--narrow); font-weight:700; text-transform:uppercase; letter-spacing:.08em;
   font-size:16px; display:block; margin-bottom:6px;}
 .mode-btn .md{font-size:12.5px; color:#56503f; line-height:1.4;}
+@media(max-width:620px){
+  .modal{padding:12px;}
+  .modal-card{padding:18px 16px 22px; box-shadow:6px 6px 0 var(--gold);}
+  .modal-card h2{font-size:clamp(26px,8vw,40px);}
+  .modal-card .lead{font-size:12px; margin:5px 0 14px;}
+  .mode-grid{gap:10px;}
+  .mode-btn{padding:13px;}
+  .mode-btn .mn{font-size:20px; margin-bottom:2px;}
+  .mode-btn .mt{font-size:15px; margin-bottom:4px;}
+  .mode-btn .md{font-size:12px; line-height:1.35;}
+}
 
 /* aktueller Modus + Markierung offizieller Ergebnisse */
 .mode-tag{font-family:var(--narrow); font-weight:700; text-transform:uppercase; letter-spacing:.1em;
