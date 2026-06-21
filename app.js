@@ -282,27 +282,79 @@ function buildKO(){
 }
 
 /* ===================== TABELLENLOGIK ===================== */
-/* Gemeinsame Tabellen-Sortierung: Punkte → Tordifferenz → erzielte Tore.
-   Den finalen Gleichstand-Tiebreaker (Name bzw. Gruppe) hängt der Aufrufer an. */
+/* Gemeinsame Tabellen-Sortierung nach allen Gruppenspielen: Punkte →
+   Tordifferenz → erzielte Tore. Wird für das Dritten-Ranking genutzt und
+   als Fallback (Regeln e/f) bei der Gruppensortierung. Den finalen
+   Gleichstand-Tiebreaker (Name bzw. Gruppe) hängt der Aufrufer an. */
 function comparePoints(x, y){
   return y.pkt-x.pkt || (y.tf-y.ta)-(x.tf-x.ta) || y.tf-x.tf;
 }
+
+/* Direkter Vergleich (Regeln a–d): Mini-Tabelle nur aus den Spielen der
+   punktgleichen Teams – Punkte, dann Tordifferenz, dann erzielte Tore.
+   `teams` sind bereits punktgleich; `played` = alle gespielten Gruppenspiele.
+   Bleiben Teams auch im direkten Vergleich gleich, wird der direkte Vergleich
+   rekursiv nur noch auf diese erneut angewendet (Regel d). Lässt sich die
+   Gruppe so nicht weiter trennen, greifen die Gesamtwerte (Regeln e/f) und
+   zuletzt der Name. */
+function orderTied(teams, played){
+  if(teams.length===1) return teams.slice();
+  const set = new Set(teams.map(t=>t.c));
+  const mini = {};
+  teams.forEach(t=>mini[t.c]={pkt:0, tf:0, ta:0});
+  played.forEach(p=>{
+    if(!set.has(p.h) || !set.has(p.a)) return;
+    const H = mini[p.h], A = mini[p.a];
+    H.tf+=p.hg; H.ta+=p.ag; A.tf+=p.ag; A.ta+=p.hg;
+    if(p.hg>p.ag) H.pkt+=3;
+    else if(p.hg<p.ag) A.pkt+=3;
+    else { H.pkt++; A.pkt++; }
+  });
+  const sorted = teams.slice().sort((x,y)=>comparePoints(mini[x.c], mini[y.c]));
+  const eq = (x,y)=>comparePoints(mini[x.c], mini[y.c])===0;
+  const out = [];
+  for(let i=0; i<sorted.length;){
+    let j = i+1;
+    while(j<sorted.length && eq(sorted[i], sorted[j])) j++;
+    const block = sorted.slice(i, j);
+    if(block.length===1) out.push(block[0]);
+    else if(block.length===teams.length){
+      /* Mini-Tabelle trennt nicht → Gesamtwerte, dann Name (Regeln e/f). */
+      block.sort((x,y)=>comparePoints(x,y) || TEAMS[x.c][0].localeCompare(TEAMS[y.c][0]));
+      out.push(...block);
+    }else out.push(...orderTied(block, played));   // Regel d: erneut, nur diese Teams
+    i = j;
+  }
+  return out;
+}
+
 function computeGroup(g){
   const rows = {};
   GROUPS[g].forEach(c=>rows[c]={c, sp:0, s:0, u:0, n:0, tf:0, ta:0, pkt:0});
+  const played = [];
   MATCHES.forEach((m,i)=>{
     if(m[0]!==g) return;
     const h = effectiveValue(`wm26:m${i}h`), a = effectiveValue(`wm26:m${i}a`);
     if(h==="" || a==="") return;
     const hg = +h, ag = +a;
+    played.push({h:m[3], a:m[4], hg, ag});
     const H = rows[m[3]], A = rows[m[4]];
     H.sp++; A.sp++; H.tf+=hg; H.ta+=ag; A.tf+=ag; A.ta+=hg;
     if(hg>ag){H.s++; A.n++; H.pkt+=3;}
     else if(hg<ag){A.s++; H.n++; A.pkt+=3;}
     else {H.u++; A.u++; H.pkt++; A.pkt++;}
   });
-  return Object.values(rows).sort((x,y)=>
-    comparePoints(x,y) || TEAMS[x.c][0].localeCompare(TEAMS[y.c][0]));
+  /* Erst nach Punkten gruppieren, punktgleiche Blöcke dann per direktem
+     Vergleich (Regeln a–d) auflösen. */
+  const byPoints = Object.values(rows).sort((x,y)=>y.pkt-x.pkt);
+  const result = [];
+  for(let i=0; i<byPoints.length;){
+    let j = i+1;
+    while(j<byPoints.length && byPoints[j].pkt===byPoints[i].pkt) j++;
+    result.push(...orderTied(byPoints.slice(i, j), played));
+    i = j;
+  }
+  return result;
 }
 /* ===================== SLOT-AUFLÖSUNG ===================== */
 /* SLOTS["r32:0:1"] = {code:"MEX"|null, official:bool} – wird bei jedem render()
