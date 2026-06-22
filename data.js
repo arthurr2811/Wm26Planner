@@ -48,7 +48,7 @@ const MATCHES = [
  ["A","Do 18.06.","18:00","CZE","RSA","Atlanta"],
  ["B","Do 18.06.","21:00","SUI","BIH","Los Angeles"],
  ["B","Fr 19.06.","00:00","CAN","QAT","Vancouver"],
- ["A","Fr 19.06.","01:00","MEX","KOR","Guadalajara"],
+ ["A","Fr 19.06.","03:00","MEX","KOR","Guadalajara"],
  ["D","Fr 19.06.","21:00","USA","AUS","Seattle"],
  ["C","Sa 20.06.","00:00","SCO","MAR","Boston"],
  ["C","Sa 20.06.","02:30","BRA","HAI","Philadelphia"],
@@ -64,7 +64,7 @@ const MATCHES = [
  ["J","Mo 22.06.","19:00","ARG","AUT","Dallas"],
  ["I","Mo 22.06.","23:00","FRA","IRQ","Philadelphia"],
  ["I","Di 23.06.","02:00","NOR","SEN","New Jersey"],
- ["J","Di 23.06.","03:00","JOR","ALG","San Francisco"],
+ ["J","Di 23.06.","05:00","JOR","ALG","San Francisco"],
  ["K","Di 23.06.","19:00","POR","UZB","Houston"],
  ["L","Di 23.06.","22:00","ENG","GHA","Boston"],
  ["L","Mi 24.06.","01:00","PAN","CRO","Toronto"],
@@ -119,14 +119,14 @@ const R32 = [
  ["Sa 04.07.","03:30","Kansas City",{g:"K",p:1},{t:["D","E","I","J","L"]}]
 ];
 const R16 = [
- ["Sa 04.07.","19:00","Houston",{w:"r32:0"},{w:"r32:2"}],
- ["Sa 04.07.","23:00","Philadelphia",{w:"r32:1"},{w:"r32:4"}],
- ["So 05.07.","22:00","New Jersey",{w:"r32:3"},{w:"r32:5"}],
+ ["Sa 04.07.","19:00","Houston",{w:"r32:0"},{w:"r32:3"}],
+ ["Sa 04.07.","23:00","Philadelphia",{w:"r32:2"},{w:"r32:5"}],
+ ["So 05.07.","22:00","New Jersey",{w:"r32:1"},{w:"r32:4"}],
  ["Mo 06.07.","02:00","Mexiko-Stadt",{w:"r32:6"},{w:"r32:7"}],
  ["Mo 06.07.","21:00","Dallas",{w:"r32:10"},{w:"r32:11"}],
  ["Di 07.07.","02:00","Seattle",{w:"r32:8"},{w:"r32:9"}],
- ["Di 07.07.","18:00","Atlanta",{w:"r32:13"},{w:"r32:15"}],
- ["Di 07.07.","22:00","Vancouver",{w:"r32:12"},{w:"r32:14"}]
+ ["Di 07.07.","18:00","Atlanta",{w:"r32:13"},{w:"r32:14"}],
+ ["Di 07.07.","22:00","Vancouver",{w:"r32:12"},{w:"r32:15"}]
 ];
 const QF = [
  ["Do 09.07.","22:00","Boston",{w:"r16:0"},{w:"r16:1"}],
